@@ -6,8 +6,22 @@
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 
+
 #ifdef CV_VERSION_EPOCH
 #if CV_VERSION_EPOCH == 2 && CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 10
+#include <cv_backports/imshow.hpp>
+#else
+namespace cv_backports {
+  using cv::destroyWindow;
+  using cv::imshow;
+  using cv::namedWindow;
+  using cv::setWindowProperty;
+  using cv::startWindowThread;
+  using cv::waitKey;
+}
+#endif
+#else
+#if CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION == 4 && CV_SUBMINOR_VERSION < 10
 #include <cv_backports/imshow.hpp>
 #else
 namespace cv_backports {
@@ -53,8 +67,18 @@ namespace ecto_opencv
     void
     operator()(const boost::signals2::connection& c) const
     {
+      std::cout << "ClosingWindow: waiting for window to be destroyed. window_name: " << name << std::endl;
       c.disconnect();
       cv_backports::destroyWindow(name);
+      while(cv_backports::isVisible(name))
+      {
+        boost::this_thread::sleep(boost::posix_time::millisec(5));
+      }
+      while(cvGetWindowHandle(name.c_str()) != NULL)
+      {
+        boost::this_thread::sleep(boost::posix_time::millisec(5));
+      }
+      std::cout << "ClosingWindow: Window is destroyed. window_name: " << name << std::endl;
     }
     std::string name;
   };
@@ -100,23 +124,28 @@ namespace ecto_opencv
           lastKey(0xff)
     {
       t.reset(new boost::thread(boost::ref(*this)));
+      std::cout << "HighGuiRunner thread started." << std::endl;
     }
 
     ~HighGuiRunner()
     {
+      std::cout << "HighGuiRunner thread signaled to stop." << std::endl;
       t->interrupt();
       t->join();
+      std::cout << "HighGuiRunner thread stopped." << std::endl;
       t.reset();
     }
 
     void
     operator()()
     {
-      cv_backports::startWindowThread();
+      std::cout << "cv_backports::startWindowThread()" << std::endl;
+      cv_backports::startWindowThread();      
       while (!boost::this_thread::interruption_requested())
       {
         jobs();
-        lastKey = 0xff & cv_backports::waitKey(10);
+        int result = cv_backports::waitKey(10);
+        lastKey = 0xff & result;
         keys[lastKey] = true;
       }
     }
@@ -129,7 +158,7 @@ namespace ecto_opencv
     }
 
     bool
-    testKey(int time, unsigned char key, bool reset)
+    testKey(int time, unsigned char key, bool reset, std::string window_name)
     {
       if (time > 0)
       {
@@ -141,7 +170,8 @@ namespace ecto_opencv
       }
       else if (time == 0)
       {
-        while (lastKey == 0xff)
+        // wait infinitely until key is pressed or window is deconstructed
+        while (lastKey == 0xff && cv_backports::isVisible(window_name))
         {
           boost::this_thread::sleep(boost::posix_time::millisec(1));
         }
@@ -155,8 +185,7 @@ namespace ecto_opencv
     boost::shared_ptr<boost::thread> t;
     sig_type jobs;
     std::bitset<0xFF> keys;
-  }
-  ;
+  };
 
   namespace
   {
@@ -253,7 +282,18 @@ namespace ecto_opencv
 
       runner->post_job(ImshowJob(image, window_name_, *full_screen_, auto_size_));
 
-      if (runner->testKey(waitkey_, 'q', true) || runner->testKey(-1, 27, true))
+      std::cout << "imshow::process: waiting for window construction. window_name: " << window_name_ << std::endl;
+      while(cvGetWindowHandle(window_name_.c_str()) == NULL)
+      {
+        boost::this_thread::sleep(boost::posix_time::millisec(5));
+      }
+      while(!cv_backports::isVisible(window_name_))
+      {
+        boost::this_thread::sleep(boost::posix_time::millisec(5));
+      }      
+      std::cout << "imshow::process: window constructed. window_name: " << window_name_ << std::endl;
+
+      if (runner->testKey(waitkey_, 'q', true, window_name_) || runner->testKey(-1, 27, true, window_name_))
       {
         runner->post_job(CloseWindow(window_name_));
         return ecto::QUIT;
@@ -261,7 +301,7 @@ namespace ecto_opencv
       typedef std::pair<int, ecto::spore<bool> > KeySporeT;
       BOOST_FOREACH(KeySporeT x, trigger_keys_)
           {
-            *(x.second) = runner->testKey(-1, x.first, true);
+            *(x.second) = runner->testKey(-1, x.first, true, window_name_);
           }
       return ecto::OK;
     }
@@ -269,7 +309,10 @@ namespace ecto_opencv
     ~imshow()
     {
       if(runner)
+      {
         runner->post_job(CloseWindow(window_name_));
+      }
+        
     }
 
     std::string window_name_;

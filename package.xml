@@ -1,6 +1,6 @@
 <package>
   <name>ecto_opencv</name>
-  <version>0.6.1</version>
+  <version>0.7.0</version>
   <description>Ecto bindings for common opencv functionality.</description>
   <author>Ethan Rublee</author>
   <author email="vrabaud@willowgarage.com">Vincent Rabaud</author>
@@ -12,12 +12,10 @@
   <build_depend>boost</build_depend>
   <build_depend>ecto</build_depend>
   <build_depend>opencv_candidate</build_depend>
-  <build_depend>cv_backports</build_depend>
 
   <run_depend>boost</run_depend>
   <run_depend>ecto</run_depend>
   <run_depend>opencv_candidate</run_depend>
-  <run_depend>cv_backports</run_depend>
 
   <test_depend>rosunit</test_depend>
 

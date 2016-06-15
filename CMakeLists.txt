@@ -37,6 +37,8 @@ add_subdirectory(python)
 if(CATKIN_ENABLE_TESTING)
   add_subdirectory(test)
   add_subdirectory(samples)
+  catkin_install_python(PROGRAMS samples/list_reader.py
+                        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 endif()
 
 ecto_sphinx(${CMAKE_CURRENT_SOURCE_DIR}/doc doc)

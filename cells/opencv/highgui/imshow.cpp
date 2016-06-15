@@ -70,10 +70,10 @@ namespace ecto_opencv
       std::cout << "ClosingWindow: waiting for window to be destroyed. window_name: " << name << std::endl;
       c.disconnect();
       cv_backports::destroyWindow(name);
-      while(cv_backports::isVisible(name))
+      /*while(cv_backports::isVisible(name))
       {
         boost::this_thread::sleep(boost::posix_time::millisec(5));
-      }
+      }*/
       while(cvGetWindowHandle(name.c_str()) != NULL)
       {
         boost::this_thread::sleep(boost::posix_time::millisec(5));
@@ -171,7 +171,8 @@ namespace ecto_opencv
       else if (time == 0)
       {
         // wait infinitely until key is pressed or window is deconstructed
-        while (lastKey == 0xff && cv_backports::isVisible(window_name))
+        //while (lastKey == 0xff && cv_backports::isVisible(window_name))
+        while (lastKey == 0xff)
         {
           boost::this_thread::sleep(boost::posix_time::millisec(1));
         }
@@ -287,10 +288,10 @@ namespace ecto_opencv
       {
         boost::this_thread::sleep(boost::posix_time::millisec(5));
       }
-      while(!cv_backports::isVisible(window_name_))
+      /*while(!cv_backports::isVisible(window_name_))
       {
         boost::this_thread::sleep(boost::posix_time::millisec(5));
-      }      
+      }*/
       std::cout << "imshow::process: window constructed. window_name: " << window_name_ << std::endl;
 
       if (runner->testKey(waitkey_, 'q', true, window_name_) || runner->testKey(-1, 27, true, window_name_))
